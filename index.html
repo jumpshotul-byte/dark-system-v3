@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Realtime Chat + Call</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a0a;color:#eee;min-height:100vh;overflow:hidden}
+.hide{display:none!important}
+
+#loginPage{display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;padding:25px;background:linear-gradient(135deg,#0a0a0a,#1a0000)}
+#loginPage h1{color:#c94b4b;font-size:28px;margin-bottom:8px}
+#loginPage p{color:#888;font-size:13px;margin-bottom:25px}
+.inp{position:relative;width:100%;max-width:340px;margin-bottom:12px}
+.inp input{width:100%;padding:14px 16px;background:#1a1a1a;border:2px solid #3a0000;border-radius:12px;color:#eee;font-size:14px;outline:none}
+.inp input:focus{border-color:#c94b4b}
+.btn{width:100%;max-width:340px;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:bold;cursor:pointer;background:linear-gradient(135deg,#8b0000,#c94b4b);color:#fff;margin-top:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+#userListPage{height:100vh;display:flex;flex-direction:column;padding:15px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:12px;border-bottom:1px solid #2a0000}
+.topbar .me{display:flex;gap:10px;align-items:center}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#8b0000,#c94b4b);display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;font-size:16px;flex-shrink:0}
+.avatar.big{width:56px;height:56px;font-size:22px}
+.avatar.small{width:34px;height:34px;font-size:14px}
+.me-info .n{font-size:14px;font-weight:bold}
+.me-info .s{font-size:10px;color:#4caf50}
+.me-info .s.off{color:#888}
+.btn-sm{padding:8px 12px;background:#1a0000;border:1px solid #8b0000;color:#c94b4b;border-radius:8px;font-size:11px;font-weight:bold;cursor:pointer}
+.search-box{position:relative;margin-bottom:15px}
+.search-box input{width:100%;padding:12px 16px;background:#101010;border:2px solid #2a0000;border-radius:12px;color:#eee;font-size:13px;outline:none}
+.search-box input:focus{border-color:#c94b4b}
+.section-title{font-size:11px;color:#c94b4b;font-weight:bold;margin-bottom:10px;letter-spacing:1px}
+.user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:15px;overflow-y:auto;padding-bottom:20px;flex:1}
+.user-card{display:flex;flex-direction:column;align-items:center;cursor:pointer;padding:10px 5px;border-radius:12px;transition:.2s;position:relative}
+.user-card:active{background:#1a0000}
+.user-card .dot{position:absolute;top:12px;right:12px;width:10px;height:10px;border-radius:50%;background:#4caf50;border:2px solid #0a0a0a}
+.user-card .dot.off{background:#555}
+.user-card .name{font-size:11px;text-align:center;margin-top:6px;color:#ddd;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{color:#666;font-size:12px;text-align:center;padding:30px;grid-column:1/-1}
+
+#chatPage{height:100vh;display:flex;flex-direction:column;background:#0a0a0a}
+.chat-header{display:flex;align-items:center;gap:10px;padding:12px 15px;background:#101010;border-bottom:1px solid #2a0000}
+.back-btn{background:none;border:none;color:#c94b4b;font-size:22px;cursor:pointer;padding:0 8px}
+.chat-header-info{flex:1;display:flex;gap:10px;align-items:center}
+.chat-header-info .n{font-size:14px;font-weight:bold}
+.chat-header-info .s{font-size:10px;color:#4caf50}
+.chat-header-info .s.off{color:#888}
+.call-btn{background:linear-gradient(135deg,#0d47a1,#1565c0);border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.call-btn svg{width:18px;height:18px;stroke:#fff;fill:none}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:80%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;word-wrap:break-word}
+.msg.me{background:linear-gradient(135deg,#0d47a1,#1565c0);align-self:flex-end;border-bottom-right-radius:3px}
+.msg.you{background:#1a1a1a;align-self:flex-start;border-bottom-left-radius:3px}
+.msg .time{font-size:9px;opacity:.6;text-align:right;margin-top:3px}
+.msg img{max-width:100%;border-radius:8px;margin-bottom:4px;cursor:pointer}
+.msg audio{max-width:200px;margin-top:4px}
+.chat-input-bar{padding:10px;background:#101010;border-top:1px solid #2a0000;display:flex;gap:6px;align-items:center}
+.chat-input{flex:1;padding:11px 14px;background:#1a1a1a;border:1px solid #2a0000;border-radius:20px;color:#eee;font-size:13px;outline:none;min-width:0}
+.cbtn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#1a1a1a}
+.cbtn svg{width:18px;height:18px;stroke:#c94b4b;fill:none}
+.cbtn.send{background:linear-gradient(135deg,#8b0000,#c94b4b)}
+.cbtn.send svg{stroke:#fff}
+.cbtn.rec{background:#ff0033}
+
+#callScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0a0000,#1a0000);display:none;flex-direction:column;justify-content:center;align-items:center;padding:30px;z-index:1000;text-align:center}
+#callScreen.on{display:flex}
+.call-avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#8b0000,#c94b4b);display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:bold;color:#fff;margin-bottom:20px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,75,75,.5)}50%{box-shadow:0 0 0 25px rgba(201,75,75,0)}}
+.call-name{font-size:24px;font-weight:bold;margin-bottom:6px}
+.call-status{color:#888;font-size:13px;margin-bottom:40px}
+.call-buttons{display:flex;gap:25px}
+.call-btn-round{width:65px;height:65px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.call-btn-round svg{width:28px;height:28px;stroke:#fff;fill:none}
+.call-accept{background:#4caf50}
+.call-end{background:#ff0033}
+.call-mute{background:#333}
+.call-mute.on{background:#ff9800}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a0000;border:1px solid #8b0000;color:#ff5c5c;padding:10px 18px;border-radius:10px;font-size:12px;font-weight:bold;z-index:2000;display:none;max-width:90%}
+.toast.on{display:block}
+.toast.ok{background:#0a1f0a;border-color:#4caf50;color:#4caf50}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div id="loginPage">
+  <h1>💬 Realtime Chat</h1>
+  <p>Masuk buat ngobrol sama teman</p>
+  <div class="inp">
+    <input type="text" id="loginUser" placeholder="Username kamu..." maxlength="20" autocomplete="off">
+  </div>
+  <button class="btn" onclick="doLogin()">Masuk Chat</button>
+</div>
+
+<div id="userListPage" class="hide">
+  <div class="topbar">
+    <div class="me">
+      <div class="avatar" id="myAvatar">U</div>
+      <div class="me-info">
+        <div class="n" id="myName">user</div>
+        <div class="s" id="myStatus">● Online</div>
+      </div>
+    </div>
+    <button class="btn-sm" onclick="logout()">Keluar</button>
+  </div>
+  <div class="section-title">🔍 CARI ORANG</div>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Ketik nama user..." oninput="renderUsers()">
+  </div>
+  <div class="section-title" id="userCount">👥 SEMUA USER</div>
+  <div class="user-grid" id="userGrid">
+    <div class="empty">Belum ada user lain</div>
+  </div>
+</div>
+
+<div id="chatPage" class="hide">
+  <div class="chat-header">
+    <button class="back-btn" onclick="backToList()">←</button>
+    <div class="avatar small" id="chatAvatar">?</div>
+    <div class="chat-header-info">
+      <div class="n" id="chatName">user</div>
+      <div class="s" id="chatStatus">● Online</div>
+    </div>
+    <button class="call-btn" onclick="startCall()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+      </svg>
+    </button>
+  </div>
+  <div class="chat-msgs" id="chatMsgs"></div>
+  <div class="chat-input-bar">
+    <input type="file" id="chatFile" accept="image/*" style="display:none" onchange="sendPhoto(this)">
+    <button class="cbtn" onclick="document.getElementById('chatFile').click()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </button>
+    <button class="cbtn" id="micBtn" onclick="toggleRecord()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+    </button>
+    <input class="chat-input" id="chatInput" placeholder="Ketik pesan..." maxlength="500">
+    <button class="cbtn send" onclick="sendMsg()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="callScreen">
+  <div class="call-avatar" id="callAvatar">?</div>
+  <div class="call-name" id="callName">user</div>
+  <div class="call-status" id="callStatus">Menghubungi...</div>
+  <div class="call-buttons">
+    <button class="call-btn-round call-mute" id="muteBtn" onclick="toggleMute()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+    </button>
+    <button class="call-btn-round call-end" onclick="endCall()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+    </button>
+    <button class="call-btn-round call-accept" id="acceptBtn" onclick="acceptCall()">
+      <svg viewBox="0 0 24 24" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove, set, get, update, query, limitToLast, onDisconnect }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA3qHYUTybNSF47b4yt4OTzvMWNpOnnszo",
+  authDomain: "darksysytem-2fef6.firebaseapp.com",
+  databaseURL: "https://darksysytem-2fef6-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "darksysytem-2fef6",
+  storageBucket: "darksysytem-2fef6.firebasestorage.app",
+  messagingSenderId: "794054174270",
+  appId: "1:794054174270:web:5e7f6dce2601eace6cd36f"
+};
+
+const CLOUD_NAME = "rsufnekc";
+const UPLOAD_PRESET = "darksystem";
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let currentUser = "";
+let currentUserKey = "";
+let chatWith = null;
+let chatUnsub = null;
+let usersUnsub = null;
+let callUnsub = null;
+let notifUnsub = null;
+let lastChatCount = 0;
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let lastNotifTime = 0;
+let pingInterval = null;
+
+let pc = null;
+let localStream = null;
+let currentCallId = null;
+let isCaller = false;
+let callAnswered = false;
+let incomingUnsub = null;
+
+function toast(msg, ok) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast on" + (ok ? " ok" : "");
+  clearTimeout(t._to);
+  t._to = setTimeout(function () { t.className = "toast"; }, 3000);
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+  });
+}
+function keyOf(u) { return u.toLowerCase().replace(/[^a-z0-9]/g, "_"); }
+function updAvatar(el, name) { el.textContent = (name || "?").charAt(0).toUpperCase(); }
+
+window.doLogin = async function () {
+  var u = document.getElementById("loginUser").value.trim();
+  if (!u) return toast("Isi username dulu!");
+  if (u.length < 3) return toast("Username minimal 3 huruf!");
+  if (u.length > 20) return toast("Username max 20 huruf!");
+
+  currentUser = u;
+  currentUserKey = keyOf(u);
+  localStorage.setItem("rtchat_user", u);
+
+  try {
+    await set(ref(db, "online/" + currentUserKey), {
+      name: u, lastPing: Date.now(), online: true, joinedAt: Date.now()
+    });
+    onDisconnect(ref(db, "online/" + currentUserKey + "/online")).set(false);
+  } catch (e) {
+    return toast("Gagal konek Firebase: " + e.message);
+  }
+
+  if (pingInterval) clearInterval(pingInterval);
+  pingInterval = setInterval(function () {
+    update(ref(db, "online/" + currentUserKey), { lastPing: Date.now() }).catch(function () {});
+  }, 15000);
+
+  document.getElementById("loginPage").classList.add("hide");
+  document.getElementById("userListPage").classList.remove("hide");
+  updAvatar(document.getElementById("myAvatar"), u);
+  document.getElementById("myName").textContent = u;
+
+  startUsersListener();
+  startNotifListener();
+  listenIncomingCalls();
+  toast("Selamat datang, " + u + "!", true);
+};
+
+window.logout = async function () {
+  if (!confirm("Keluar dari chat?")) return;
+  try { await update(ref(db, "online/" + currentUserKey), { online: false }); } catch (e) {}
+  localStorage.removeItem("rtchat_user");
+  location.reload();
+};
+
+function startUsersListener() {
+  if (usersUnsub) usersUnsub();
+  usersUnsub = onValue(ref(db, "online"), function (snap) {
+    var v = snap.val() || {};
+    var arr = [];
+    var now = Date.now();
+    for (var k in v) {
+      var u = v[k];
+      if (!u.name) continue;
+      if (k === currentUserKey) continue;
+      var isOnline = u.online === true && (now - (u.lastPing || 0)) < 60000;
+      arr.push({ key: k, name: u.name, online: isOnline });
+    }
+    arr.sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
+    window._users = arr;
+    renderUsers();
+  });
+}
+
+function renderUsers() {
+  var grid = document.getElementById("userGrid");
+  var q = (document.getElementById("searchInput").value || "").toLowerCase().trim();
+  var arr = (window._users || []).filter(function (u) {
+    return u.name.toLowerCase().indexOf(q) !== -1;
+  });
+
+  document.getElementById("userCount").textContent = "👥 SEMUA USER (" + arr.length + ")";
+
+  if (arr.length === 0) {
+    grid.innerHTML = '<div class="empty">' + (q ? 'Gak ada user "' + esc(q) + '"' : "Belum ada user lain online") + '</div>';
+    return;
+  }
+
+  var h = "";
+  for (var i = 0; i < arr.length; i++) {
+    var u = arr[i];
+    h += '<div class="user-card" onclick="openChat(\'' + esc(u.name) + '\',\'' + esc(u.key) + '\')">' +
+      '<div class="dot ' + (u.online ? "" : "off") + '"></div>' +
+      '<div class="avatar big">' + esc(u.name.charAt(0).toUpperCase()) + '</div>' +
+      '<div class="name">' + esc(u.name) + '</div>' +
+      '</div>';
+  }
+  grid.innerHTML = h;
+}
+
+window.openChat = function (name, key) {
+  chatWith = { name: name, key: key };
+  document.getElementById("userListPage").classList.add("hide");
+  document.getElementById("chatPage").classList.remove("hide");
+  updAvatar(document.getElementById("chatAvatar"), name);
+  document.getElementById("chatName").textContent = name;
+  updateChatStatus();
+  startChatListener();
+};
+
+window.backToList = function () {
+  if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+  document.getElementById("chatPage").classList.add("hide");
+  document.getElementById("userListPage").classList.remove("hide");
+  chatWith = null;
+};
+
+function chatRoomKey() {
+  return [currentUserKey, chatWith.key].sort().join("__");
+}
+
+function updateChatStatus() {
+  if (!chatWith) return;
+  var arr = window._users || [];
+  var u = arr.find(function (x) { return x.key === chatWith.key; });
+  var el = document.getElementById("chatStatus");
+  if (u && u.online) {
+    el.textContent = "● Online";
+    el.className = "s";
+  } else {
+    el.textContent = "Offline";
+    el.className = "s off";
+  }
+}
+
+function startChatListener() {
+  if (chatUnsub) chatUnsub();
+  var box = document.getElementById("chatMsgs");
+  box.innerHTML = '<div class="empty">Memuat chat...</div>';
+  lastChatCount = 0;
+
+  chatUnsub = onValue(ref(db, "chats/" + chatRoomKey()), function (snap) {
+    box.innerHTML = "";
+    if (!snap.exists()) {
+      box.innerHTML = '<div class="empty">Belum ada pesan. Mulai ngobrol!</div>';
+      lastChatCount = 0;
+      return;
+    }
+    var count = 0, lastMsg = null;
+    snap.forEach(function (child) {
+      var m = child.val();
+      var div = document.createElement("div");
+      var isMe = m.fromKey === currentUserKey;
+      div.className = "msg " + (isMe ? "me" : "you");
+      var tgl = new Date(m.time || Date.now());
+      var jam = tgl.getHours().toString().padStart(2, "0") + ":" + tgl.getMinutes().toString().padStart(2, "0");
+      var body = "";
+      if (m.image) body += '<img src="' + esc(m.image) + '" onclick="window.open(\'' + m.image + '\',\'_blank\')">';
+      if (m.audio) body += '<audio controls preload="none" src="' + esc(m.audio) + '"></audio>';
+      if (m.text) body += esc(m.text);
+      body += '<div class="time">' + jam + '</div>';
+      div.innerHTML = body;
+      box.appendChild(div);
+      count++;
+      lastMsg = m;
+    });
+    box.scrollTop = box.scrollHeight;
+
+    if (lastChatCount > 0 && count > lastChatCount && lastMsg && lastMsg.fromKey !== currentUserKey) {
+      playNotif();
+    }
+    lastChatCount = count;
+  });
+}
+
+window.sendMsg = function () {
+  var inp = document.getElementById("chatInput");
+  var t = inp.value.trim();
+  if (!t || !chatWith) return;
+  push(ref(db, "chats/" + chatRoomKey()), {
+    from: currentUser, fromKey: currentUserKey,
+    to: chatWith.name, toKey: chatWith.key,
+    text: t, time: Date.now()
+  });
+  inp.value = "";
+};
+
+document.addEventListener("keypress", function (e) {
+  if (e.key === "Enter" && document.activeElement.id === "chatInput") sendMsg();
+});
+  /* ===== KIRIM FOTO ===== */
+window.sendPhoto = async function (input) {
+  var file = input.files[0];
+  if (!file || !chatWith) return;
+  if (file.size > 5 * 1024 * 1024) { toast("Max 5 MB"); input.value = ""; return; }
+  toast("Upload foto...");
+  try {
+    var fd = new FormData();
+    fd.append("file", file);
+    fd.append("upload_preset", UPLOAD_PRESET);
+    var res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload", { method: "POST", body: fd });
+    var data = await res.json();
+    if (!data.secure_url) throw new Error("Upload gagal");
+    push(ref(db, "chats/" + chatRoomKey()), {
+      from: currentUser, fromKey: currentUserKey,
+      to: chatWith.name, toKey: chatWith.key,
+      image: data.secure_url, time: Date.now()
+    });
+    toast("Terkirim!", true);
+  } catch (e) { toast("Gagal: " + e.message); }
+  input.value = "";
+};
+
+/* ===== REKAM SUARA ===== */
+window.toggleRecord = async function () {
+  if (isRecording) { stopRecord(); return; }
+  if (!chatWith) return;
+  try {
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = function (e) { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async function () {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      var blob = new Blob(audioChunks, { type: "audio/webm" });
+      if (blob.size < 500) { toast("Rekaman terlalu pendek"); return; }
+      toast("Upload suara...");
+      try {
+        var file = new File([blob], "voice_" + Date.now() + ".webm", { type: "audio/webm" });
+        var fd = new FormData();
+        fd.append("file", file);
+        fd.append("upload_preset", UPLOAD_PRESET);
+        var res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/video/upload", { method: "POST", body: fd });
+        var data = await res.json();
+        if (!data.secure_url) throw new Error("Upload gagal");
+        push(ref(db, "chats/" + chatRoomKey()), {
+          from: currentUser, fromKey: currentUserKey,
+          to: chatWith.name, toKey: chatWith.key,
+          audio: data.secure_url, time: Date.now()
+        });
+        toast("Terkirim!", true);
+      } catch (e) { toast("Gagal: " + e.message); }
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById("micBtn").classList.add("rec");
+    toast("🎤 Merekam... tekan lagi untuk stop");
+  } catch (e) { toast("Izin mikrofon ditolak"); }
+};
+function stopRecord() {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  isRecording = false;
+  document.getElementById("micBtn").classList.remove("rec");
+}
+
+/* ===== WEBRTC VOICE CALL ===== */
+const rtcConfig = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
+  ]
+};
+
+window.startCall = async function () {
+  if (!chatWith) return;
+  if (pc) { toast("Sedang ada panggilan"); return; }
+
+  isCaller = true;
+  callAnswered = false;
+  currentCallId = chatRoomKey() + "_" + Date.now();
+
+  showCallScreen("Menghubungi " + chatWith.name + "...", false);
+
+  await set(ref(db, "calls/" + currentCallId), {
+    from: currentUser, fromKey: currentUserKey,
+    to: chatWith.name, toKey: chatWith.key,
+    status: "calling", time: Date.now()
+  });
+
+  callUnsub = onValue(ref(db, "calls/" + currentCallId + "/status"), async function (snap) {
+    var s = snap.val();
+    if (s === "accepted" && !callAnswered) {
+      callAnswered = true;
+      document.getElementById("callStatus").textContent = "Tersambung";
+      await setupPeerConnection(true);
+    }
+    if (s === "ended") {
+      if (callAnswered) {
+        document.getElementById("callStatus").textContent = "Panggilan berakhir";
+        setTimeout(cleanupCall, 1000);
+      } else {
+        cleanupCall();
+        toast("Panggilan ditolak");
+      }
+    }
+  });
+};
+
+function listenIncomingCalls() {
+  if (incomingUnsub) incomingUnsub();
+  incomingUnsub = onValue(ref(db, "calls"), function (snap) {
+    var v = snap.val() || {};
+    for (var id in v) {
+      var c = v[id];
+      if (c.toKey === currentUserKey && c.status === "calling" && (Date.now() - c.time) < 30000) {
+        if (!currentCallId && !pc) {
+          currentCallId = id;
+          isCaller = false;
+          callAnswered = false;
+          chatWith = { name: c.from, key: c.fromKey };
+          showCallScreen(c.from + " menelepon...", true);
+          listenCallStatus();
+          return;
+        }
+      }
+    }
+  });
+}
+
+function listenCallStatus() {
+  if (callUnsub) callUnsub();
+  callUnsub = onValue(ref(db, "calls/" + currentCallId + "/status"), function (snap) {
+    var s = snap.val();
+    if (s === "ended") cleanupCall();
+  });
+}
+
+window.acceptCall = async function () {
+  if (!currentCallId) return;
+  await update(ref(db, "calls/" + currentCallId), { status: "accepted" });
+  document.getElementById("callStatus").textContent = "Tersambung";
+  document.getElementById("acceptBtn").style.display = "none";
+  await setupPeerConnection(false);
+};
+
+window.endCall = async function () {
+  if (currentCallId) {
+    try { await update(ref(db, "calls/" + currentCallId), { status: "ended" }); } catch (e) {}
+  }
+  cleanupCall();
+};
+
+window.toggleMute = function () {
+  if (!localStream) return;
+  var track = localStream.getAudioTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  document.getElementById("muteBtn").classList.toggle("on", !track.enabled);
+};
+
+function showCallScreen(status, showAccept) {
+  document.getElementById("callScreen").classList.add("on");
+  document.getElementById("callName").textContent = chatWith ? chatWith.name : "user";
+  document.getElementById("callStatus").textContent = status;
+  updAvatar(document.getElementById("callAvatar"), chatWith ? chatWith.name : "?");
+  document.getElementById("acceptBtn").style.display = showAccept ? "flex" : "none";
+}
+
+function cleanupCall() {
+  if (pc) { try { pc.close(); } catch (e) {} pc = null; }
+  if (localStream) {
+    localStream.getTracks().forEach(function (t) { t.stop(); });
+    localStream = null;
+  }
+  if (callUnsub) { callUnsub(); callUnsub = null; }
+  currentCallId = null;
+  isCaller = false;
+  callAnswered = false;
+  document.getElementById("callScreen").classList.remove("on");
+  document.getElementById("muteBtn").classList.remove("on");
+  document.getElementById("acceptBtn").style.display = "flex";
+}
+
+async function setupPeerConnection(initiator) {
+  pc = new RTCPeerConnection(rtcConfig);
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStream.getTracks().forEach(function (t) { pc.addTrack(t, localStream); });
+  } catch (e) {
+    toast("Izin mikrofon ditolak");
+    cleanupCall();
+    return;
+  }
+
+  var remoteAudio = new Audio();
+  remoteAudio.autoplay = true;
+  pc.ontrack = function (e) {
+    remoteAudio.srcObject = e.streams[0];
+    remoteAudio.play().catch(function () {});
+  };
+
+  pc.onicecandidate = function (e) {
+    if (e.candidate) {
+      var path = isCaller ? "callerCandidates" : "answerCandidates";
+      push(ref(db, "calls/" + currentCallId + "/" + path), e.candidate.toJSON());
+    }
+  };
+
+  pc.onconnectionstatechange = function () {
+    if (pc.connectionState === "connected") {
+      document.getElementById("callStatus").textContent = "Tersambung ✓";
+    } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+      document.getElementById("callStatus").textContent = "Terputus";
+      setTimeout(cleanupCall, 1500);
+    }
+  };
+
+  if (initiator) {
+    var offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await set(ref(db, "calls/" + currentCallId + "/offer"), {
+      type: offer.type, sdp: offer.sdp
+    });
+
+    onValue(ref(db, "calls/" + currentCallId + "/answer"), async function (snap) {
+      var a = snap.val();
+      if (a && pc && !pc.currentRemoteDescription) {
+        try { await pc.setRemoteDescription(new RTCSessionDescription(a)); } catch (e) {}
+      }
+    });
+
+    onValue(ref(db, "calls/" + currentCallId + "/answerCandidates"), function (snap) {
+      var v = snap.val() || {};
+      for (var k in v) {
+        if (pc && pc.remoteDescription) {
+          try { pc.addIceCandidate(new RTCIceCandidate(v[k])); } catch (e) {}
+        }
+      }
+    });
+  } else {
+    onValue(ref(db, "calls/" + currentCallId + "/offer"), async function (snap) {
+      var o = snap.val();
+      if (o && pc && !pc.currentRemoteDescription) {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(o));
+          var answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await set(ref(db, "calls/" + currentCallId + "/answer"), {
+            type: answer.type, sdp: answer.sdp
+          });
+        } catch (e) {}
+      }
+    });
+
+    onValue(ref(db, "calls/" + currentCallId + "/callerCandidates"), function (snap) {
+      var v = snap.val() || {};
+      for (var k in v) {
+        if (pc && pc.remoteDescription) {
+          try { pc.addIceCandidate(new RTCIceCandidate(v[k])); } catch (e) {}
+        }
+      }
+    });
+  }
+}
+
+/* ===== NOTIF SUARA ===== */
+function playNotif() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 800;
+    o.type = "sine";
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    o.start(); o.stop(ctx.currentTime + 0.2);
+    if (navigator.vibrate) navigator.vibrate(100);
+  } catch (e) {}
+}
+
+function startNotifListener() {
+  if (notifUnsub) notifUnsub();
+  notifUnsub = onValue(ref(db, "chats"), function (snap) {
+    var all = snap.val() || {};
+    var myKey = currentUserKey;
+    var best = 0;
+    for (var room in all) {
+      var msgs = all[room];
+      for (var k in msgs) {
+        var m = msgs[k];
+        if (m.toKey === myKey && m.fromKey !== myKey && m.time > lastNotifTime) {
+          if (m.time > best) best = m.time;
+        }
+      }
+    }
+    if (best > lastNotifTime) {
+      if (lastNotifTime > 0) playNotif();
+      lastNotifTime = best;
+    }
+  });
+}
+
+/* ===== AUTO START ===== */
+window.addEventListener("load", function () {
+  var saved = localStorage.getItem("rtchat_user");
+  if (saved) document.getElementById("loginUser").value = saved;
+  setInterval(updateChatStatus, 3000);
+});
+</script>
+
+</body>
+</html>
